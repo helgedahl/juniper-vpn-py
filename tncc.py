@@ -4,9 +4,11 @@
 import sys
 import os
 import logging
-import StringIO
+#import StringIO
+import io
 import mechanize
 import cookielib
+#import cookiejar
 import struct
 import socket
 import ssl
@@ -14,6 +16,7 @@ import base64
 import collections
 import zlib
 import HTMLParser
+#import html.parser
 import socket
 import netifaces
 import urlgrabber
@@ -633,7 +636,7 @@ if __name__ == "__main__":
         dspreauth_value = sys.argv[2]
         dssignin_value = sys.argv[3]
         'TNCC ', dspreauth_value, dssignin_value
-        print t.get_cookie(dspreauth, dssignin).value
+        print(t.get_cookie(dspreauth, dssignin).value)
     else:
         sock = socket.fromfd(0, socket.AF_UNIX, socket.SOCK_SEQPACKET)
         server = tncc_server(sock, t)

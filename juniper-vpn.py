@@ -4,6 +4,7 @@
 import subprocess
 import mechanize
 import cookielib
+#import cookiejar
 import getpass
 import sys
 import os
@@ -22,6 +23,7 @@ import platform
 import socket
 import netifaces
 import datetime
+import time
 
 debug = False
 
@@ -94,9 +96,9 @@ class juniper_vpn(object):
                 for f in args.certs.split(','):
                     cert = tncc.x509cert(f.strip())
                     if now < cert.not_before:
-                        print 'WARNING: %s is not yet valid' % f
+                        print('WARNING: %s is not yet valid' % f)
                     if now > cert.not_after:
-                        print 'WARNING: %s is expired' % f
+                        print('WARNING: %s is expired' % f)
                     certs.append(cert)
                 args.certs = [n.strip() for n in args.certs.split(',')]
             args.certs = certs
@@ -104,6 +106,7 @@ class juniper_vpn(object):
         self.br = mechanize.Browser()
 
         self.cj = cookielib.LWPCookieJar()
+        #self.cj = cookiejar.LWPCookieJar()
         self.br.set_cookiejar(self.cj)
 
         # Browser options
@@ -159,17 +162,21 @@ class juniper_vpn(object):
         # Open landing page
         self.r = self.br.open('https://' + self.args.host)
         while True:
-            action = self.next_action()
-            if action == 'tncc':
-                self.action_tncc()
-            elif action == 'login':
-                self.action_login()
-            elif action == 'key':
-                self.action_key()
-            elif action == 'continue':
-                self.action_continue()
-            elif action == 'connect':
-                self.action_connect()
+            try:
+                action = self.next_action()
+                if action == 'tncc':
+                    self.action_tncc()
+                elif action == 'login':
+                    self.action_login()
+                elif action == 'key':
+                    self.action_key()
+                elif action == 'continue':
+                    self.action_continue()
+                elif action == 'connect':
+                    self.action_connect()
+            except KeyboardInterrupt:
+                print( 'Interrupted')
+                break
 
             self.last_action = action
 
@@ -197,7 +204,7 @@ class juniper_vpn(object):
             self.args.username = raw_input('Username: ')
         if self.args.password is None or self.last_action == 'login':
             if self.fixed_password:
-                print 'Login failed (Invalid username or password?)'
+                print('Login failed (Invalid username or password?)')
                 sys.exit(1)
             else:
                 self.args.password = getpass.getpass('Password: ')
@@ -220,7 +227,7 @@ class juniper_vpn(object):
                 secondary_password = "".join([  self.args.pass_prefix,
                                                 self.pass_postfix])
             else:
-                print 'Secondary password postfix not provided'
+                print('Secondary password postfix not provided')
                 sys.exit(1)
             self.br.form['password#2'] = secondary_password
         if self.args.realm:
@@ -232,7 +239,7 @@ class juniper_vpn(object):
         self.needs_2factor = True
         if self.args.oath:
             if self.last_action == 'key':
-                print 'Login failed (Invalid OATH key)'
+                print('Login failed (Invalid OATH key)')
                 sys.exit(1)
             self.key = hotp(self.args.oath)
         elif self.key is None:
@@ -251,7 +258,7 @@ class juniper_vpn(object):
         now = time.time()
         delay = 10.0 - (now - self.last_connect)
         if delay > 0:
-            print 'Waiting %.0f...' % (delay)
+            print('Waiting %.0f...' % (delay))
             time.sleep(delay)
         self.last_connect = time.time();
 
@@ -269,14 +276,15 @@ class juniper_vpn(object):
         else:
             ret = p.wait()
         ret = p.returncode
+        print('Connectprocess return code: ' + str(ret))
 
         # Openconnect specific
         if ret == 2:
             self.cj.clear(self.args.host, '/', 'DSID')
             self.r = self.br.open(self.r.geturl())
 
-def cleanup():
-    os.killpg(0, signal.SIGTERM)
+#def cleanup():
+    #os.killpg(0, signal.SIGTERM)
 
 if __name__ == "__main__":
 
@@ -354,9 +362,9 @@ if __name__ == "__main__":
         args.action = shlex.split(args.action)
 
     if args.host == None or args.action == []:
-        print "--host and <action> are required parameters"
+        print("--host and <action> are required parameters")
         sys.exit(1)
 
-    atexit.register(cleanup)
+    #atexit.register(cleanup)
     jvpn = juniper_vpn(args)
     jvpn.run()
